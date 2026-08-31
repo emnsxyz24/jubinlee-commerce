@@ -1,0 +1,264 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Lato', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Lato', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  --color-brand-primary: #1A170F;
+  --color-brand-secondary: #2C2A24;
+  --color-brand-accent: #D84820;
+  --color-brand-cta: #E04F26;
+  --color-brand-light: #E4D8CC;
+  --color-brand-surface: #FAF6F1;
+  --color-brand-bg: #F4ECE5;
+}
+
+:root {
+  --bg-page: #F4ECE5;
+  --color-primary: #1A170F;
+  --color-secondary-dark: #2C2A24;
+  --color-accent: #D84820;
+  --color-cta-primary: #E04F26;
+  --color-surface-light: #E4D8CC;
+  --color-surface-elevated: #FAF6F1;
+
+  --background: 40 33% 98%;
+  --foreground: 40 25% 10%;
+  --card: 40 33% 98%;
+  --card-foreground: 40 25% 10%;
+  --popover: 40 33% 98%;
+  --popover-foreground: 40 25% 10%;
+  --primary: 15 78% 51%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 25% 93%;
+  --secondary-foreground: 40 25% 10%;
+  --muted: 40 20% 90%;
+  --muted-foreground: 40 10% 45%;
+  --accent: 40 25% 93%;
+  --accent-foreground: 40 25% 10%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 40 20% 85%;
+  --input: 40 20% 85%;
+  --ring: 15 78% 51%;
+  --radius: 0.75rem;
+}
+
+[data-sonner-toaster],
+.toaster {
+  z-index: 999999 !important;
+}
+
+[data-sonner-toast] {
+  background-color: #FAF6F1 !important;
+  color: #1A170F !important;
+  border: 1px solid #E4D8CC !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1rem !important;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-primary);
+    background-color: var(--bg-page);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: var(--font-sans);
+    color: var(--color-primary);
+  }
+
+  .tnum,
+  .tabular-nums,
+  .font-numeric,
+  td,
+  th,
+  .stat-value {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "zero";
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a,
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  input[type="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input:disabled {
+    cursor: not-allowed !important;
+  }
+}
+
+.glass-nav {
+  background: rgba(244, 236, 229, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(228, 216, 204, 0.6);
+}
+
+html, body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.btn-primary-flat {
+  background-color: var(--color-cta-primary);
+  color: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px rgba(224, 79, 38, 0.28);
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out;
+  will-change: transform;
+  cursor: pointer;
+}
+
+.btn-primary-flat:hover {
+  background-color: #C8431E;
+  box-shadow: 0 6px 18px rgba(224, 79, 38, 0.38);
+  transform: translateY(-1px);
+}
+
+.btn-primary-flat:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 6px rgba(224, 79, 38, 0.2);
+}
+
+.btn-primary-flat:disabled {
+  background-color: #E2D7CC;
+  color: #9C9186;
+  cursor: not-allowed !important;
+  box-shadow: none;
+  transform: none;
+}
+
+.pill-flat {
+  background-color: #ffffff;
+  color: var(--color-primary);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(228, 216, 204, 0.8);
+  box-shadow: 0 1px 3px rgba(26, 23, 15, 0.04);
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s ease-out;
+  will-change: transform;
+  cursor: pointer;
+}
+
+.pill-flat:hover:not(:disabled) {
+  background-color: var(--color-surface-elevated);
+  border-color: var(--color-accent);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.pill-flat:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.pill-flat:disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.pill-flat-selected {
+  background-color: var(--color-cta-primary);
+  color: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-cta-primary);
+  box-shadow: 0 2px 6px rgba(224, 79, 38, 0.28);
+  font-weight: 700;
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s ease-out;
+  will-change: transform;
+  cursor: pointer;
+}
+
+.pill-flat-selected:hover:not(:disabled) {
+  background-color: #C8431E;
+  border-color: #C8431E;
+}
+
+.pill-flat-selected:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.pill-flat-selected:disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  transform: none;
+  box-shadow: none;
+}
+
+[role="dialog"],
+[aria-modal="true"],
+.overflow-y-auto,
+.overflow-auto {
+  overscroll-behavior: contain;
+}
+
+[data-sonner-toaster] {
+  --width: 420px !important;
+  z-index: 999999 !important;
+  font-family: var(--font-sans) !important;
+}
+
+[data-sonner-toast] {
+  width: var(--width) !important;
+  border-radius: 22px !important;
+  padding: 16px 20px !important;
+  background: #FFFDFB !important;
+  border: 1px solid #E4D8CC !important;
+  box-shadow: 0 20px 35px -10px rgba(26, 23, 15, 0.15), 0 10px 15px -5px rgba(26, 23, 15, 0.08), 0 0 0 1px rgba(228, 216, 204, 0.5) !important;
+  color: #1A170F !important;
+  gap: 14px !important;
+}
+
+[data-sonner-toast] [data-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #1A170F !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #7D766E !important;
+  line-height: 1.45 !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}

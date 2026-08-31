@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build outputs & caches
+dist
+.output
+.nuxt
+.turbo
+.cache
+.vite
+*.tsbuildinfo
+
+# Test coverage
+coverage
+*.lcov
+
+# Executables & binaries
+*.exe
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs
+*.log
+
+# IDEs & editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+
