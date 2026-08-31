@@ -16,36 +16,42 @@ async function bootstrap() {
     instance.set('trust proxy', true);
   }
 
-  // Allowed Origins for CORS
+  const envCors = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
+    : [];
+
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
     'https://jubinlee.mikaeru.my.id',
+    'https://jubinleeadmin.mikaeru.my.id',
     process.env.STOREFRONT_URL,
     process.env.ADMIN_URL,
+    ...envCors,
   ].filter(Boolean) as string[];
 
-  // Production & Development CORS Handler
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
 
       const isAllowedDomain =
         allowedOrigins.some((allowed) => origin === allowed || origin.startsWith(allowed)) ||
-        /(\.onrender\.com|\.devtunnels\.ms|\.ngrok-free\.app|\.loca\.lt|\.trycloudflare\.com)(:\d+)?$/.test(origin) ||
+        /(\.mikaeru\.my\.id|^https:\/\/mikaeru\.my\.id)$/.test(origin) ||
+        /(\.pages\.dev|\.vercel\.app|\.onrender\.com|\.devtunnels\.ms|\.ngrok-free\.app|\.loca\.lt|\.trycloudflare\.com)(:\d+)?$/.test(origin) ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1');
 
       if (isAllowedDomain || process.env.NODE_ENV !== 'production') {
-        callback(null, origin);
+        callback(null, true);
       } else {
-        callback(new Error(`CORS origin "${origin}" not allowed by security policy`), false);
+        callback(null, false);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Guest-Token'],
+    optionsSuccessStatus: 204,
   });
 
   app.use(cookieParser());
