@@ -11,15 +11,58 @@ export interface AdminUser {
 
 import { API_BASE_URL } from '../config';
 
+const isTokenExpired = (rawToken: string): boolean => {
+  if (!rawToken) return true;
+  try {
+    const parts = rawToken.split('.');
+    if (parts.length !== 3) return true;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (!payload.exp) return false;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string>(localStorage.getItem('admin_token') || '');
-  const user = ref<AdminUser | null>(
-    JSON.parse(localStorage.getItem('admin_user') || 'null'),
-  );
+  const getInitialToken = (): string => {
+    const savedToken = localStorage.getItem('admin_token') || '';
+    if (savedToken && isTokenExpired(savedToken)) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+      return '';
+    }
+    return savedToken;
+  };
+
+  const getInitialUser = (): AdminUser | null => {
+    const savedToken = localStorage.getItem('admin_token') || '';
+    if (!savedToken || isTokenExpired(savedToken)) {
+      return null;
+    }
+    try {
+      return JSON.parse(localStorage.getItem('admin_user') || 'null');
+    } catch {
+      return null;
+    }
+  };
+
+  const token = ref<string>(getInitialToken());
+  const user = ref<AdminUser | null>(getInitialUser());
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  const isAuthenticated = computed(() => !!token.value);
+  const isAuthenticated = computed(() => {
+    if (!token.value) return false;
+    return !isTokenExpired(token.value);
+  });
   const userPermissions = computed(() => user.value?.permissions || []);
 
   const hasPermission = (perm: string) => {

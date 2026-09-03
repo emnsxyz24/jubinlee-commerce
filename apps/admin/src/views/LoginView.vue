@@ -43,7 +43,7 @@
             <input
               v-model="email"
               type="email"
-              placeholder="admin@fashionstore.com"
+              placeholder="name@example.com"
               required
               class="w-full pl-10 pr-4 py-3 rounded-2xl bg-[#FAF6F1] border border-[#E4D8CC] text-sm text-[#1A170F] placeholder:text-[#7D766E]/60 focus:outline-none focus:ring-2 focus:ring-[#E04F26] focus:border-transparent transition"
             />
@@ -87,13 +87,6 @@
           </button>
         </div>
       </form>
-
-      <div class="pt-4 border-t border-[#F4ECE5] text-center text-xs text-[#7D766E]">
-        <span class="text-[11px]">Default Demo Account:</span><br>
-        <code class="bg-[#FAF6F1] text-[#1A170F] px-3 py-1 rounded-xl font-mono text-[11px] mt-1.5 inline-block font-semibold">
-          admin@fashionstore.com / AdminPass123!
-        </code>
-      </div>
     </div>
 
   </div>
@@ -108,8 +101,8 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-vue-next';
 const router = useRouter();
 const authStore = useAuthStore();
 
-const email = ref('admin@fashionstore.com');
-const password = ref('AdminPass123!');
+const email = ref('');
+const password = ref('');
 const showPassword = ref(false);
 const loading = ref(false);
 const error = ref('');
@@ -119,7 +112,8 @@ const handleLogin = async () => {
     loading.value = true;
     error.value = '';
     await authStore.login(email.value, password.value);
-    router.push('/');
+    const redirect = (router.currentRoute.value.query.redirect as string) || '/';
+    router.push(redirect);
   } catch (err: any) {
     error.value = err?.message || 'Invalid credentials or login failed';
   } finally {

@@ -100,7 +100,11 @@ router.beforeEach((to, _from, next) => {
   const isAuthenticated = authStore.isAuthenticated;
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    return next({ name: 'login' });
+    authStore.logout();
+    return next({
+      name: 'login',
+      query: to.fullPath !== '/' ? { redirect: to.fullPath } : undefined,
+    });
   }
 
   if (to.meta.guestOnly && isAuthenticated) {

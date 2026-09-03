@@ -291,10 +291,10 @@ const authStore = useAuthStore();
 const timeframe = ref('30d');
 
 const stats = ref({
-  revenue: 1634000,
-  productsCount: 20,
-  ordersCount: 6,
-  lowStockCount: 23,
+  revenue: 0,
+  productsCount: 0,
+  ordersCount: 0,
+  lowStockCount: 0,
 });
 
 const rawChartData = computed(() => {
@@ -384,10 +384,10 @@ const fetchDashboardStats = async () => {
     const revenueSum = ordersList.reduce((sum: number, ord: any) => sum + Number(ord.total || 0), 0);
 
     stats.value = {
-      revenue: revenueSum > 0 ? revenueSum : 1634000,
-      productsCount: p?.meta?.total ?? p?.items?.length ?? 20,
-      ordersCount: o?.meta?.total ?? ordersList.length ?? 6,
-      lowStockCount: Array.isArray(inv) ? inv.length : 23,
+      revenue: revenueSum,
+      productsCount: p?.meta?.total ?? p?.items?.length ?? 0,
+      ordersCount: o?.meta?.total ?? ordersList.length ?? 0,
+      lowStockCount: Array.isArray(inv) ? inv.length : 0,
     };
   } catch (e) {
     console.error(e);
