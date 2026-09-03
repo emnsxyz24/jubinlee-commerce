@@ -204,6 +204,19 @@ export class AdminProductsService {
       }
     }
 
+    if (dto.variants?.length) {
+      const skus = dto.variants.map((v) => v.sku);
+      const conflictVariant = await this.prisma.productVariant.findFirst({
+        where: {
+          sku: { in: skus },
+          productId: { not: id },
+        },
+      });
+      if (conflictVariant) {
+        throw new ConflictException(`SKU "${conflictVariant.sku}" sudah digunakan oleh produk lain.`);
+      }
+    }
+
     let validAdminUserId: string | null = null;
     if (adminUserId) {
       const adminExists = await this.prisma.adminUser.findUnique({
@@ -214,114 +227,130 @@ export class AdminProductsService {
       }
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.product.update({
-        where: { id },
-        data: {
-          ...(dto.name ? { name: dto.name } : {}),
-          ...(dto.slug ? { slug: dto.slug } : {}),
-          ...(dto.categoryId !== undefined ? { categoryId: dto.categoryId || null } : {}),
-          ...(dto.basePrice !== undefined ? { basePrice: dto.basePrice } : {}),
-          ...(dto.status ? { status: dto.status as any } : {}),
-          ...(dto.skuPrefix !== undefined ? { skuPrefix: dto.skuPrefix || null } : {}),
-          ...(dto.description !== undefined ? { description: dto.description || null } : {}),
-          ...(dto.attributes !== undefined ? { attributes: dto.attributes } : {}),
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.product.update({
+          where: { id },
+          data: {
+            ...(dto.name ? { name: dto.name } : {}),
+            ...(dto.slug ? { slug: dto.slug } : {}),
+            ...(dto.categoryId !== undefined ? { categoryId: dto.categoryId || null } : {}),
+            ...(dto.basePrice !== undefined ? { basePrice: dto.basePrice } : {}),
+            ...(dto.status ? { status: dto.status as any } : {}),
+            ...(dto.skuPrefix !== undefined ? { skuPrefix: dto.skuPrefix || null } : {}),
+            ...(dto.description !== undefined ? { description: dto.description || null } : {}),
+            ...(dto.attributes !== undefined ? { attributes: dto.attributes } : {}),
+          },
+        });
+
+        if (dto.images !== undefined) {
+          await tx.productImage.deleteMany({ where: { productId: id } });
+          if (dto.images.length) {
+            for (let idx = 0; idx < dto.images.length; idx++) {
+              const img = dto.images[idx];
+              await tx.productImage.create({
+                data: {
+                  productId: id,
+                  url: img.url,
+                  altText: img.altText || null,
+                  isPrimary: img.isPrimary ?? (idx === 0),
+                  displayOrder: img.displayOrder ?? idx,
+                },
+              });
+            }
+          }
+        }
+
+        if (dto.variants !== undefined && dto.variants.length > 0) {
+          const existingVariants = await tx.productVariant.findMany({ where: { productId: id } });
+          const incomingSkus = new Set(dto.variants.map((v) => v.sku));
+
+          for (const ev of existingVariants) {
+            if (!incomingSkus.has(ev.sku)) {
+              const hasOrderItems = await tx.orderItem.count({ where: { variantId: ev.id } });
+              if (hasOrderItems > 0) {
+                await tx.productVariant.update({
+                  where: { id: ev.id },
+                  data: { isActive: false },
+                });
+              } else {
+                await tx.cartItem.deleteMany({ where: { variantId: ev.id } });
+                await tx.inventoryAdjustment.deleteMany({ where: { variantId: ev.id } });
+                await tx.productVariant.delete({ where: { id: ev.id } });
+              }
+            }
+          }
+
+          for (const v of dto.variants) {
+            const existing = existingVariants.find(
+              (ev) => ev.sku === v.sku || (ev.size === (v.size || null) && ev.color === (v.color || null))
+            );
+
+            if (existing) {
+              const delta = v.stockQuantity - existing.stockQuantity;
+              await tx.productVariant.update({
+                where: { id: existing.id },
+                data: {
+                  sku: v.sku,
+                  size: v.size || null,
+                  color: v.color || null,
+                  colorHex: v.colorHex || null,
+                  priceOverride: v.priceOverride || null,
+                  stockQuantity: v.stockQuantity,
+                  lowStockThreshold: v.lowStockThreshold || 5,
+                  isActive: true,
+                },
+              });
+
+              if (delta !== 0) {
+                await tx.inventoryAdjustment.create({
+                  data: {
+                    variantId: existing.id,
+                    adminUserId: validAdminUserId,
+                    quantityDelta: delta,
+                    reason: 'manual adjustment from product edit',
+                  },
+                });
+              }
+            } else {
+              const createdVar = await tx.productVariant.create({
+                data: {
+                  productId: id,
+                  sku: v.sku,
+                  size: v.size || null,
+                  color: v.color || null,
+                  colorHex: v.colorHex || null,
+                  priceOverride: v.priceOverride || null,
+                  stockQuantity: v.stockQuantity,
+                  lowStockThreshold: v.lowStockThreshold || 5,
+                },
+              });
+
+              if (v.stockQuantity > 0) {
+                await tx.inventoryAdjustment.create({
+                  data: {
+                    variantId: createdVar.id,
+                    adminUserId: validAdminUserId,
+                    quantityDelta: v.stockQuantity,
+                    reason: 'initial restock on creation',
+                  },
+                });
+              }
+            }
+          }
+        }
       });
 
-      if (dto.images !== undefined) {
-        await tx.productImage.deleteMany({ where: { productId: id } });
-        if (dto.images.length) {
-          for (let idx = 0; idx < dto.images.length; idx++) {
-            const img = dto.images[idx];
-            await tx.productImage.create({
-              data: {
-                productId: id,
-                url: img.url,
-                altText: img.altText || null,
-                isPrimary: img.isPrimary ?? (idx === 0),
-                displayOrder: img.displayOrder ?? idx,
-              },
-            });
-          }
+      return this.findOne(id);
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') {
+          const target = (err.meta?.target as string[]) || [];
+          throw new ConflictException(`Data dengan nilai yang sama sudah ada (${target.join(', ') || 'duplicate entry'})`);
         }
       }
-
-      if (dto.variants !== undefined && dto.variants.length > 0) {
-        const existingVariants = await tx.productVariant.findMany({ where: { productId: id } });
-        const incomingSkus = new Set(dto.variants.map((v) => v.sku));
-
-        for (const ev of existingVariants) {
-          if (!incomingSkus.has(ev.sku)) {
-            try {
-              await tx.productVariant.delete({ where: { id: ev.id } });
-            } catch {
-              await tx.productVariant.update({ where: { id: ev.id }, data: { isActive: false } });
-            }
-          }
-        }
-
-        for (const v of dto.variants) {
-          const existing = existingVariants.find(
-            (ev) => ev.sku === v.sku || (ev.size === (v.size || null) && ev.color === (v.color || null))
-          );
-
-          if (existing) {
-            const delta = v.stockQuantity - existing.stockQuantity;
-            await tx.productVariant.update({
-              where: { id: existing.id },
-              data: {
-                sku: v.sku,
-                size: v.size || null,
-                color: v.color || null,
-                colorHex: v.colorHex || null,
-                priceOverride: v.priceOverride || null,
-                stockQuantity: v.stockQuantity,
-                lowStockThreshold: v.lowStockThreshold || 5,
-                isActive: true,
-              },
-            });
-
-            if (delta !== 0) {
-              await tx.inventoryAdjustment.create({
-                data: {
-                  variantId: existing.id,
-                  adminUserId: validAdminUserId,
-                  quantityDelta: delta,
-                  reason: 'manual adjustment from product edit',
-                },
-              });
-            }
-          } else {
-            const createdVar = await tx.productVariant.create({
-              data: {
-                productId: id,
-                sku: v.sku,
-                size: v.size || null,
-                color: v.color || null,
-                colorHex: v.colorHex || null,
-                priceOverride: v.priceOverride || null,
-                stockQuantity: v.stockQuantity,
-                lowStockThreshold: v.lowStockThreshold || 5,
-              },
-            });
-
-            if (v.stockQuantity > 0) {
-              await tx.inventoryAdjustment.create({
-                data: {
-                  variantId: createdVar.id,
-                  adminUserId: validAdminUserId,
-                  quantityDelta: v.stockQuantity,
-                  reason: 'initial restock on creation',
-                },
-              });
-            }
-          }
-        }
-      }
-    });
-
-    return this.findOne(id);
+      throw err;
+    }
   }
 
   async delete(id: string) {
