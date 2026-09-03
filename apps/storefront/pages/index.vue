@@ -13,7 +13,7 @@
 
       <h1 
         :style="headingParallaxStyle"
-        class="font-serif text-[6.25rem] sm:text-[8.25rem] lg:text-[10.5rem] font-black tracking-tighter leading-[0.84] uppercase text-[#1A170F] opacity-95 select-none text-center shrink-0 z-10 relative"
+        class="font-serif text-[clamp(2.75rem,14vw,5.75rem)] sm:text-[clamp(5.5rem,14vw,8.25rem)] lg:text-[10.5rem] font-black tracking-tighter leading-[0.84] uppercase text-[#1A170F] opacity-95 select-none text-center shrink-0 z-10 relative w-full px-2"
       >
         PURE<br />COMFORT
       </h1>

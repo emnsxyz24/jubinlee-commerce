@@ -2,7 +2,7 @@
   <ClientOnly>
     <div 
       v-if="shouldShow" 
-      class="fixed top-3.5 bottom-3.5 right-1 sm:right-1.5 z-[9999] w-2 flex flex-col justify-start pointer-events-none select-none"
+      class="fixed top-16 sm:top-20 bottom-3.5 right-1 sm:right-1.5 z-40 w-2 flex flex-col justify-start pointer-events-none select-none"
     >
       <div 
         ref="trackRef"
@@ -82,9 +82,10 @@ const updateScrollbar = () => {
 
   shouldShow.value = true;
 
+  const fallbackTop = typeof window !== 'undefined' && window.innerWidth < 640 ? 64 : 80;
   const trackHeight = trackRef.value && trackRef.value.clientHeight > 0
     ? trackRef.value.clientHeight
-    : Math.max(50, clientHeight - 28);
+    : Math.max(50, clientHeight - fallbackTop - 14);
 
   const calculatedHeight = Math.max(36, (clientHeight / scrollHeight) * trackHeight);
   thumbHeight.value = Math.min(calculatedHeight, Math.max(20, trackHeight - 10));
@@ -152,9 +153,10 @@ const onDrag = (e: MouseEvent) => {
   );
   const clientHeight = window.innerHeight;
   const maxScroll = Math.max(1, scrollHeight - clientHeight);
+  const fallbackTop = typeof window !== 'undefined' && window.innerWidth < 640 ? 64 : 80;
   const trackHeight = trackRef.value && trackRef.value.clientHeight > 0
     ? trackRef.value.clientHeight
-    : (clientHeight - 28);
+    : (clientHeight - fallbackTop - 14);
   const maxThumbTop = Math.max(1, trackHeight - thumbHeight.value);
 
   const scrollDelta = (deltaY / maxThumbTop) * maxScroll;
@@ -192,9 +194,10 @@ const onTouchDrag = (e: TouchEvent) => {
   );
   const clientHeight = window.innerHeight;
   const maxScroll = Math.max(1, scrollHeight - clientHeight);
+  const fallbackTop = typeof window !== 'undefined' && window.innerWidth < 640 ? 64 : 80;
   const trackHeight = trackRef.value && trackRef.value.clientHeight > 0
     ? trackRef.value.clientHeight
-    : (clientHeight - 28);
+    : (clientHeight - fallbackTop - 14);
   const maxThumbTop = Math.max(1, trackHeight - thumbHeight.value);
 
   const scrollDelta = (deltaY / maxThumbTop) * maxScroll;

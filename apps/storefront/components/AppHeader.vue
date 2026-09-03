@@ -200,7 +200,18 @@
           <template v-else>
             <NuxtLink
               to="/login"
-              class="h-10 px-4 sm:px-5 rounded-full bg-[#1A170F] text-[#FAF6F1] hover:bg-[#E04F26] text-xs uppercase tracking-wider font-extrabold flex items-center justify-center transition-all duration-200 shadow-xs shrink-0 cursor-pointer whitespace-nowrap"
+              class="sm:hidden w-10 h-10 rounded-full bg-[#1A170F] text-[#FAF6F1] hover:bg-[#E04F26] flex items-center justify-center transition-all duration-200 shadow-xs shrink-0 cursor-pointer"
+              title="Sign In"
+              aria-label="Sign In"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </NuxtLink>
+
+            <NuxtLink
+              to="/login"
+              class="hidden sm:flex h-10 px-5 rounded-full bg-[#1A170F] text-[#FAF6F1] hover:bg-[#E04F26] text-xs uppercase tracking-wider font-extrabold items-center justify-center transition-all duration-200 shadow-xs shrink-0 cursor-pointer whitespace-nowrap"
             >
               Get Started
             </NuxtLink>
@@ -313,14 +324,14 @@
             <NuxtLink
               to="/login"
               @click="mobileMenuOpen = false"
-              class="flex-1 h-10 rounded-xl bg-[#1A170F] text-[#FAF6F1] font-bold text-xs uppercase tracking-wider flex items-center justify-center"
+              class="flex-1 h-11 rounded-xl bg-[#1A170F] text-[#FAF6F1] hover:bg-[#E04F26] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-[0.98]"
             >
               Sign In
             </NuxtLink>
             <NuxtLink
               to="/register"
               @click="mobileMenuOpen = false"
-              class="flex-1 h-10 rounded-xl border border-[#E4D8CC] bg-white text-[#1A170F] font-bold text-xs uppercase tracking-wider flex items-center justify-center"
+              class="flex-1 h-11 rounded-xl border-2 border-[#1A170F] bg-white text-[#1A170F] hover:bg-[#1A170F] hover:text-[#FAF6F1] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-[0.98]"
             >
               Register
             </NuxtLink>
