@@ -19,7 +19,7 @@
               Welcome back, Store Admin
             </h1>
             <p class="text-xs sm:text-sm text-[#7D766E] max-w-xl">
-              Start your day with clean catalog operations. • August 1, 2026 - August 31, 2026
+              Start your day with clean catalog operations. • {{ periodStore.dateRange }}
             </p>
           </div>
 
@@ -272,10 +272,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { AreaChart, DonutChart } from 'vue-chrts';
 import AdminLayout from '../components/AdminLayout.vue';
 import { useAuthStore } from '../stores/auth';
+import { usePeriodStore, MONTH_SHORT_NAMES } from '../stores/period';
 import { API_BASE_URL } from '../config';
 import {
   ShieldCheck,
@@ -288,6 +289,7 @@ import {
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
+const periodStore = usePeriodStore();
 const timeframe = ref('30d');
 
 const stats = ref({
@@ -297,27 +299,55 @@ const stats = ref({
   lowStockCount: 0,
 });
 
+const periodOrders = ref<any[]>([]);
+
 const rawChartData = computed(() => {
+  const yr = periodStore.selectedYear;
+  const mo = periodStore.selectedMonth;
+  const lastDay = new Date(yr, mo + 1, 0).getDate();
+
   if (timeframe.value === '7d') {
-    return [
-      { label: 'Mon', revenue: 450000, orders: 1 },
-      { label: 'Tue', revenue: 780000, orders: 2 },
-      { label: 'Wed', revenue: 320000, orders: 1 },
-      { label: 'Thu', revenue: 1100000, orders: 3 },
-      { label: 'Fri', revenue: 1450000, orders: 4 },
-      { label: 'Sat', revenue: 2100000, orders: 5 },
-      { label: 'Sun', revenue: 1850000, orders: 4 },
-    ];
+    const days: { label: string; revenue: number; orders: number }[] = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const now = new Date();
+    const isThisMonth = yr === now.getFullYear() && mo === now.getMonth();
+    const endDay = isThisMonth ? now.getDate() : lastDay;
+    const startDay = Math.max(1, endDay - 6);
+
+    for (let d = startDay; d <= endDay; d++) {
+      const dDate = new Date(yr, mo, d);
+      const label = dayNames[dDate.getDay()];
+      const dayOrders = periodOrders.value.filter((o: any) => {
+        const od = new Date(o.createdAt);
+        return od.getFullYear() === yr && od.getMonth() === mo && od.getDate() === d;
+      });
+      const dayRev = dayOrders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
+      days.push({ label, revenue: dayRev, orders: dayOrders.length });
+    }
+    return days;
   }
-  return [
-    { label: 'Aug 1', revenue: 350000, orders: 1 },
-    { label: 'Aug 5', revenue: 890000, orders: 2 },
-    { label: 'Aug 10', revenue: 640000, orders: 1 },
-    { label: 'Aug 15', revenue: 1750000, orders: 4 },
-    { label: 'Aug 20', revenue: 1420000, orders: 3 },
-    { label: 'Aug 25', revenue: 2600000, orders: 6 },
-    { label: 'Aug 30', revenue: 2450000, orders: 5 },
-  ];
+
+  const buckets = [1, 5, 10, 15, 20, 25, lastDay].filter((d, i, arr) => arr.indexOf(d) === i && d <= lastDay);
+  const monthShort = MONTH_SHORT_NAMES[mo];
+
+  return buckets.map((dayNum, idx) => {
+    const prevDay = idx === 0 ? 1 : buckets[idx - 1] + 1;
+    const bucketOrders = periodOrders.value.filter((o: any) => {
+      const od = new Date(o.createdAt);
+      return (
+        od.getFullYear() === yr &&
+        od.getMonth() === mo &&
+        od.getDate() >= prevDay &&
+        od.getDate() <= dayNum
+      );
+    });
+    const bucketRev = bucketOrders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
+    return {
+      label: `${monthShort} ${dayNum}`,
+      revenue: bucketRev,
+      orders: bucketOrders.length,
+    };
+  });
 });
 
 const chartDataFormatted = computed(() => {
@@ -348,16 +378,15 @@ const formatYAxis = (tick: any) => {
   return `Rp${val}`;
 };
 
-const donutData = ref([40, 30, 20, 10]);
-const donutLabels = ref([
-  { name: 'Outerwear & Tops', color: '#1A170F' },
-  { name: 'Trousers & Pants', color: '#4A443C' },
-  { name: 'Dresses & Skirts', color: '#7D766E' },
-  { name: 'Accessories', color: '#CEC5BB' },
+const palette = ['#1A170F', '#4A443C', '#7D766E', '#CEC5BB', '#E04F26', '#128C7E', '#B45309'];
+
+const donutData = ref<number[]>([1]);
+const donutLabels = ref<{ name: string; color: string }[]>([
+  { name: 'All Categories', color: '#1A170F' },
 ]);
 
 const getDonutPercentage = (name: string) => {
-  const idx = donutLabels.value.findIndex(l => l.name === name);
+  const idx = donutLabels.value.findIndex((l) => l.name === name);
   if (idx < 0) return 0;
   const total = donutData.value.reduce((a, b) => a + b, 0);
   return total > 0 ? Math.round((donutData.value[idx] / total) * 100) : 0;
@@ -369,32 +398,65 @@ const avgOrderValue = computed(() => (totalChartOrders.value > 0 ? Math.round(to
 
 const fetchDashboardStats = async () => {
   const headers = { Authorization: `Bearer ${authStore.token}` };
+  const fromIso = periodStore.startDate.toISOString();
+  const toIso = periodStore.endDate.toISOString();
+
   try {
-    const [pRes, oRes, invRes] = await Promise.all([
+    const [pRes, oRes, invRes, catRes, salesRes] = await Promise.all([
       fetch(`${API_BASE_URL}/admin/products`, { headers }).catch(() => null),
-      fetch(`${API_BASE_URL}/admin/orders`, { headers }).catch(() => null),
+      fetch(`${API_BASE_URL}/admin/orders?limit=100`, { headers }).catch(() => null),
       fetch(`${API_BASE_URL}/admin/inventory?lowStock=true`, { headers }).catch(() => null),
+      fetch(`${API_BASE_URL}/admin/categories`, { headers }).catch(() => null),
+      fetch(`${API_BASE_URL}/admin/analytics/sales?from=${fromIso}&to=${toIso}`, { headers }).catch(() => null),
     ]);
 
     const p = pRes && pRes.ok ? await pRes.json() : null;
     const o = oRes && oRes.ok ? await oRes.json() : null;
     const inv = invRes && invRes.ok ? await invRes.json() : null;
+    const cats = catRes && catRes.ok ? await catRes.json() : null;
+    const sales = salesRes && salesRes.ok ? await salesRes.json() : null;
 
-    const ordersList = o?.items || [];
-    const revenueSum = ordersList.reduce((sum: number, ord: any) => sum + Number(ord.total || 0), 0);
+    if (sales && Array.isArray(sales.orders)) {
+      periodOrders.value = sales.orders;
+    } else {
+      const allOrders = o?.items || [];
+      const startMs = periodStore.startDate.getTime();
+      const endMs = periodStore.endDate.getTime();
+      periodOrders.value = allOrders.filter((ord: any) => {
+        const t = new Date(ord.createdAt).getTime();
+        return t >= startMs && t <= endMs;
+      });
+    }
+
+    const monthRevenue = periodOrders.value.reduce((sum: number, ord: any) => sum + Number(ord.total || 0), 0);
 
     stats.value = {
-      revenue: revenueSum,
+      revenue: monthRevenue,
       productsCount: p?.meta?.total ?? p?.items?.length ?? 0,
-      ordersCount: o?.meta?.total ?? ordersList.length ?? 0,
+      ordersCount: periodOrders.value.length,
       lowStockCount: Array.isArray(inv) ? inv.length : 0,
     };
+
+    if (Array.isArray(cats) && cats.length > 0) {
+      donutLabels.value = cats.map((c: any, i: number) => ({
+        name: c.name,
+        color: palette[i % palette.length],
+      }));
+      donutData.value = cats.map((c: any) => c._count?.products || 0);
+    }
   } catch (e) {
     console.error(e);
   }
 };
 
 onMounted(fetchDashboardStats);
+
+watch(
+  () => [periodStore.selectedYear, periodStore.selectedMonth],
+  () => {
+    fetchDashboardStats();
+  }
+);
 
 const formatPrice = (val: any) => Number(val || 0).toLocaleString('id-ID');
 </script>
